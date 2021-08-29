@@ -155,6 +155,9 @@ namespace gazebo {
       update_period_ = 1.0;
     }
 
+    transform_broadcaster_ = boost::shared_ptr<tf::TransformBroadcaster>(new tf::TransformBroadcaster());
+
+
     // ROS PUB-SUB
     ROS_INFO_NAMED("AckermanSteer", "%s: Try to subuscribe to %s",
           gazebo_ros_->info(), command_topic_.c_str());
@@ -167,16 +170,18 @@ namespace gazebo {
     ROS_INFO_NAMED("AckermanSteer", "%s: Subscribe to %s",
           gazebo_ros_->info(), command_topic_.c_str());
 
-    this->callback_queue_thread_ =
-       boost::thread(boost::bind(&AckermanSteer::QueueThread, this));
+    
 
        // ----------------
-    if (publishOdomTF_)
+   if (publishOdomTF_)
     {
       odometry_publisher_ = gazebo_ros_->node()->advertise<nav_msgs::Odometry>(odometry_topic_, 1);
       ROS_INFO_NAMED("diff_drive", "%s: Advertise odom on %s ", gazebo_ros_->info(), odometry_topic_.c_str());
     }
-    transform_broadcaster_ = boost::shared_ptr<tf::TransformBroadcaster>(new tf::TransformBroadcaster());
+
+    this->callback_queue_thread_ =
+       boost::thread(boost::bind(&AckermanSteer::QueueThread, this));
+    
     //----------------
 
     last_update_time_ = this->GazeboTime();
@@ -195,6 +200,7 @@ namespace gazebo {
   }
 
   std::vector<double> AckermanSteer::GetAckAngles(double phi) {
+   //sboost::mutex::scoped_lock scoped_lock(lock);
     std::vector<double> phi_angles;
     double numerator = 2.0 * wheelbase_ * sin(phi);
     phi_angles.assign(4, 0.0);
@@ -206,6 +212,7 @@ namespace gazebo {
   }
 
   std::vector<double> AckermanSteer::GetDiffSpeeds(double vel, double phi) {
+   //boost::mutex::scoped_lock scoped_lock(lock);
     std::vector<double> wheel_speeds;
     wheel_speeds.assign(4, 0.0);
     wheel_speeds[RL] = vel * (1.0 - (wheel_separation_ * tan(phi) ) /
@@ -226,7 +233,7 @@ namespace gazebo {
       //if ( publishWheelTF_ ) publishWheelTF();
       //if ( publishWheelJointState_ ) publishWheelJointState();
       // ----
-
+      //ROS_INFO("Update");
       double steer_ang_curr, steer_error, steer_cmd_effort;
       double drive_vel_curr, drive_error, drive_cmd_effort;
       std::vector<double> ack_steer_angles = GetAckAngles(rot_);
@@ -248,6 +255,7 @@ namespace gazebo {
             steer_error = steer_ang_curr - steer_target_angles_[i];
             steer_cmd_effort = steer_PIDs_[i].Update(steer_error, step_time);
             steer_joints_[i]->SetForce(X, steer_cmd_effort);
+            //printf("steer %f\n", steer_target_angles_[i]);
             //steer_joints_[i]->SetAngle(X, steer_target_angles_[i]);
             break;
           case RL:
@@ -257,6 +265,7 @@ namespace gazebo {
             drive_error = drive_vel_curr - drive_target_velocities_[i];
             drive_cmd_effort = drive_PIDs_[i].Update(drive_error, step_time);
             drive_joints_[i]->SetForce(Z, drive_cmd_effort);
+            //printf("vel %f\n", drive_target_velocities_[i]);
             //drive_joints_[i]->SetVelocity(Z, drive_target_velocities_[i] * 2.0 / wheel_diameter_);
         }
         if (debug_) {
@@ -305,6 +314,8 @@ namespace gazebo {
       boost::mutex::scoped_lock scoped_lock(lock);
       x_ = cmd_msg->linear.x;
       rot_ = cmd_msg->angular.z;
+      //printf("obtained vel, rot %f %f\n", x_, rot_);
+      //ROS_INFO("callback");
   }
 
 
@@ -320,6 +331,7 @@ void AckermanSteer::publishOdometry ( double step_time )
     tf::Vector3 vt;
 
     if ( odom_source_ == ENCODER ) {
+        ROS_INFO("ENCODER");
         // getting data form encoder integration
         qt = tf::Quaternion ( odom_.pose.pose.orientation.x, odom_.pose.pose.orientation.y, odom_.pose.pose.orientation.z, odom_.pose.pose.orientation.w );
         vt = tf::Vector3 ( odom_.pose.pose.position.x, odom_.pose.pose.position.y, odom_.pose.pose.position.z );
