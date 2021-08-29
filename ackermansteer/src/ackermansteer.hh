@@ -30,9 +30,15 @@
 #include<geometry_msgs/Pose2D.h>
 #include<geometry_msgs/Twist.h>
 #include<ros/callback_queue.h>
+#include<tf/transform_broadcaster.h>
+#include <nav_msgs/Odometry.h>
 #include<string>
 #include<cmath>
 #include<vector>
+
+// Boost
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
 
 namespace gazebo {
 // Wheel order follows cartestion quadrant numbering
@@ -48,11 +54,13 @@ class AckermanSteer : public ModelPlugin {
     ~AckermanSteer();
     void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf);
     void OnUpdate();
+    
 
  private:
     common::Time GazeboTime();
     std::vector<double> GetAckAngles(double phi);
     std::vector<double> GetDiffSpeeds(double vel, double phi);
+    void publishOdometry ( double step_time );
 
     physics::ModelPtr model;
     event::ConnectionPtr updateConnection_;
@@ -107,9 +115,14 @@ class AckermanSteer : public ModelPlugin {
 
     OdomSource odom_source_;
 
+    nav_msgs::Odometry odom_;
+
     std::vector<physics::JointPtr> steer_joints_, drive_joints_;
     std::vector<common::PID> steer_PIDs_, drive_PIDs_;
     std::vector<double> steer_target_angles_, drive_target_velocities_;
+
+    boost::shared_ptr<tf::TransformBroadcaster> transform_broadcaster_;
+    ros::Publisher odometry_publisher_;
 };
 }  // namespace gazebo
 
