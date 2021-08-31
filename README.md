@@ -6,14 +6,20 @@ https://github.com/froohoo/ackermansteer
 
 ### How to install
 Simply put all three packages to the catkin_ws/src directory and run
-    'catkin_make'
+```
+catkin_make
+```
 from catkin_ws directory. This should build all the packages and Ackermann steering plugin without problems!
 
 ### How to use
 First you need to launch the world simulation with
-    'roslaunch my_robot world.launch'
+```
+roslaunch my_robot world.launch
+```
 Then you need to start the robot control program with
-    'roslaunch ball_chaser ball_chaser.launch'
+```
+roslaunch ball_chaser ball_chaser.launch
+```
 And youre good to go!
 
 Theres a white ball inside the world in gazebo. Simply put this ball infront of the robot (somewhere where robot could see it) - and it will start chasing it!
